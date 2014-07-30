@@ -15,7 +15,6 @@ getTyAbb n c with (getBinding n c)
 ... | just (TyAbbBind τ) = τ
 ... | _                  = Empty
 
-
 typeEq : Type → Type → Ctx →  Bool
 typeEq Empty    Empty      c = true
 typeEq Boolean  Boolean    c = true
@@ -26,6 +25,10 @@ typeEq τ         (TyVar j) c = typeEq τ (getTyAbb j c) c
 typeEq (TyAll y) (TyAll z) c = (typeEq y z c)
 typeEq _         _         _           = false 
 
+
+isTypeAligned : Type → Type → Ctx → Bool
+isTypeAligned (α ⇒ β) σ c = typeEq σ α c
+isTypeAligned _ _ _ = false
 
 getTypeFromContext : ℕ → Ctx → Maybe Type
 getTypeFromContext i c with (getBinding i c)
@@ -58,11 +61,20 @@ type-of (TmIf q a b) c = if (typeEq (type-of q c) Boolean c)
 type-of (TmVar i) c = (maybeYank (getTypeFromContext i c))
 type-of (TmAbs τ body) c = let σ = type-of body ((VarBind τ) ∷ c)
                             in τ ⇒ (negTypeShift 1 σ)
+--type-of (TmApp rator rand) c = let τ = type-of rator c
+--                               in let σ = type-of rand c
+--                                  in (if (isArrow τ)
+--                                      then (conseq τ)
+--                                      else Empty)
+
 type-of (TmApp rator rand) c = let τ = type-of rator c
                                in let σ = type-of rand c
                                   in (if (isArrow τ)
-                                      then (conseq τ)
+                                      then (if (isTypeAligned τ σ c)
+                                            then (conseq τ)
+                                            else Empty)
                                       else Empty)
+
 
 type-of (TmTAbs body) c = TyAll (type-of body (TyVarBind ∷ c))
 type-of (TmTApp e τ) c with (type-of e c)
@@ -93,7 +105,7 @@ typeTest2 : Type
 typeTest2 = type-of (TmApp (TmAbs (Nat ⇒ Nat) (TmVar 0)) (TmAbs Nat (TmVar 0))) []
 
 typeTest3 : Type
-typeTest3 = type-of (TmApp (TmTApp (TmTAbs (TmAbs (TyVar 0) (TmVar 0))) (Nat ⇒ Nat)) (TmTApp (TmTAbs (TmVar 0)) Nat)) []
+typeTest3 = type-of (TmApp (TmTApp (TmTAbs (TmAbs (TyVar 0) (TmVar 0))) (Nat ⇒ Nat)) (TmTApp (TmTAbs (TmAbs (TyVar 0) (TmVar 0))) Nat)) []
 
 typeTest4 : Type
 typeTest4 = type-of (TmAbs (Nat ⇒ Nat) (TmAbs Nat (TmApp (TmVar 1) (TmApp (TmVar 1) (TmVar 0))))) []
