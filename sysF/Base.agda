@@ -16,9 +16,9 @@ data Type : Set where
   Empty   : Type
   Boolean : Type
   Nat     : Type
-  TyVar   : ℕ    → Type
+  TypeVar : ℕ    → Type
   _⇒_     : Type → Type → Type
-  TyAll   : Type → Type
+  Forall  : Type → Type
 
 {-
   Basic term definitions
@@ -32,14 +32,14 @@ data Term : Set where
   Empty   : Term
   Num     : ℕ    → Term
   Succ    : Term → Term
-  TmTrue  : Term
-  TmFalse : Term
-  TmVar   : ℕ    → Term
-  TmAbs   : Type → Term → Term
-  TmApp   : Term → Term → Term
-  TmTAbs  : Term → Term
-  TmTApp  : Term → Type → Term
-  TmIf    : Term → Term → Term → Term
+  True    : Term
+  False   : Term
+  Var     : ℕ    → Term
+  Lam     : Type → Term → Term
+  App     : Term → Term → Term
+  TypeAbs : Term → Term
+  TypeApp : Term → Type → Term
+  If      : Term → Term → Term → Term
 
 {-
   Bindings that will be pushed into the environment/
@@ -48,14 +48,22 @@ data Term : Set where
   as possible about the values they are binding.
 -}
 data Binding : Set where
-  TyVarBind : Binding
+  TypeVarBind : Binding
   VarBind   : Type → Binding
   TyAbbBind : Type → Binding
   TmAbbBind : Term → Type → Binding
 
+{-
+  A context is a list of bindings.  This serves
+  a dual purpose as an environment during evaluation,
+  and as a context during type checking
+-}
 Ctx : Set
 Ctx = List Binding
 
+{-
+  Some helper functions.
+-}
 geq : ℕ → ℕ → Bool
 geq zero    zero    = true
 geq (suc n) zero    = true
@@ -89,10 +97,10 @@ lookup  _      []       = nothing
 isVal : Term → Bool
 isVal Empty          = true
 isVal (Num n)        = true
-isVal TmTrue         = true
-isVal TmFalse        = true
-isVal (TmAbs τ body) = true
-isVal (TmTAbs body)  = true
+isVal True           = true
+isVal False          = true
+isVal (Lam τ body)   = true
+isVal (TypeAbs body) = true
 isVal (Succ n)       = true
 isVal _              = false
 
@@ -106,4 +114,4 @@ isArrow _       = false
 
 conseq : Type → Type
 conseq (α ⇒ β) = β
-conseq _ = Empty
+conseq _       = Empty

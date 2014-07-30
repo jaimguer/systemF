@@ -8,27 +8,28 @@ open import Shifting
 
 {-
   Primary substitution method for terms.
+  j : Index of free variable to be substituted
+  s : Term that will replace variable j
 -}
-
 termSubst : ℕ → Term → Term → Term
-termSubst j s Empty    = Empty
-termSubst j s TmTrue   = TmTrue
-termSubst j s TmFalse  = TmFalse
-termSubst j s (Num n)  = (Num n)
-termSubst j s (Succ n) = Succ (termSubst j s n)
-termSubst j s (TmIf q f r) = TmIf (termSubst j s q)
-                                  (termSubst j s f)
-                                  (termSubst j s r)
-
-termSubst j s (TmVar x) with (== x j)
+termSubst j s Empty      = Empty
+termSubst j s True       = True
+termSubst j s False      = False
+termSubst j s (Num n)    = (Num n)
+termSubst j s (Succ n)   = Succ (termSubst j s n)
+termSubst j s (If q f r) = If (termSubst j s q)
+                              (termSubst j s f)
+                               (termSubst j s r)
+termSubst j s (Var x) with (== x j)
 ... | true  = (termShift j s)
-... | false = (TmVar x)
+... | false = (Var x)
 
-termSubst j s (TmAbs τ body)     = TmAbs τ (termSubst (suc j) s body)
-termSubst j s (TmApp rator rand) = TmApp (termSubst j s rator)
-                                          (termSubst j s rand)
-termSubst j s (TmTAbs body)      = TmTAbs (termSubst (suc j) s body)
-termSubst j s (TmTApp exp τ)     = TmTApp (termSubst j s exp) τ
+-- Increment to ensure only free variables are substituted.
+termSubst j s (Lam τ body)     = Lam τ (termSubst (suc j) s body)
+termSubst j s (App rator rand) = App (termSubst j s rator)
+                                     (termSubst j s rand)
+termSubst j s (TypeAbs body)      = TypeAbs (termSubst (suc j) s body)
+termSubst j s (TypeApp exp τ)     = TypeApp (termSubst j s exp) τ
 
 {-
   Primary substitution method for types.
@@ -38,25 +39,30 @@ typeSubst σ j Empty     = Empty
 typeSubst σ j Boolean   = Boolean
 typeSubst σ j Nat       = Nat
 
-typeSubst σ j (TyVar x) with (== x j)
+typeSubst σ j (TypeVar x) with (== x j)
 ... | true  = (typeShift j σ)
-... | false = (TyVar x)
+... | false = (TypeVar x)
 
 typeSubst σ j (α ⇒ β)   = (typeSubst σ j α) ⇒ (typeSubst σ j β)
-typeSubst σ j (TyAll β) = TyAll (typeSubst σ (suc j) β)
+typeSubst σ j (Forall β) = Forall (typeSubst σ (suc j) β)
 
 {-
-  Substitute the terms with index 0.
+  Substitute the free variables
   s : the term to be substituted
   t : the term into which the substitution will occurr
+  The inner termSubst substitutes for all free variables within t.
+  Because of the inner termShift, the variables will all have indicies
+  one larger than they should.
+  The negTermShift decrements all variables indices by 1
 -}
 termSubstTop : Term → Term → Term
 termSubstTop s t = negTermShift 1 (termSubst 0 (termShift 1 s) t)
 
 {-
-  Substitute the type with index 0.
+  Substitute the free types
   s : the type to be substituted
   t : the type into which the substitution will occurr
+  This operation is analogous to the above termSubstTop
 -}
 typeSubstTop : Type → Type → Type
 typeSubstTop σ τ = negTypeShift 1 (typeSubst (typeShift 1 σ) 0 τ)
@@ -66,24 +72,24 @@ typeSubstTop σ τ = negTypeShift 1 (typeSubst (typeShift 1 σ) 0 τ)
 -}
 tyTermSubst : Type → ℕ → Term → Term
 tyTermSubst σ j Empty     = Empty
-tyTermSubst σ j TmTrue    = TmTrue
-tyTermSubst σ j TmFalse   = TmFalse
+tyTermSubst σ j True    = True
+tyTermSubst σ j False   = False
 tyTermSubst σ j (Succ n)  = Succ (tyTermSubst σ j n)
 tyTermSubst σ j (Num n)   = (Num n)
-tyTermSubst σ j (TmVar x) = (TmVar x)
-tyTermSubst σ j (TmIf q f s) = TmIf (tyTermSubst σ j q)
-                                    (tyTermSubst σ j f)
-                                    (tyTermSubst σ j s)
-tyTermSubst σ j (TmAbs τ body)     = TmAbs (typeSubst σ j τ) (tyTermSubst σ (suc j) body)
-tyTermSubst σ j (TmApp rator rand) = TmApp (tyTermSubst σ j rator)
-                                           (tyTermSubst σ j rand)
-tyTermSubst σ j (TmTAbs β)       = TmTAbs (tyTermSubst σ (suc j) β)
-tyTermSubst σ j (TmTApp exp τ)     = TmTApp (tyTermSubst σ j exp) (typeSubst σ j τ)
+tyTermSubst σ j (Var x) = (Var x)
+tyTermSubst σ j (If q f s) = If (tyTermSubst σ j q)
+                                (tyTermSubst σ j f)
+                                (tyTermSubst σ j s)
+tyTermSubst σ j (Lam τ body)     = Lam (typeSubst σ j τ) (tyTermSubst σ (suc j) body)
+tyTermSubst σ j (App rator rand) = App (tyTermSubst σ j rator)
+                                       (tyTermSubst σ j rand)
+tyTermSubst σ j (TypeAbs β)      = TypeAbs (tyTermSubst σ (suc j) β)
+tyTermSubst σ j (TypeApp exp τ)  = TypeApp (tyTermSubst σ j exp) (typeSubst σ j τ)
 
 
 {-
   Substitute a type into the
-  "outermost" type variable
+  the "outermost" free type variable.
 -}
 tyTermSubstTop : Type → Term → Term
 tyTermSubstTop σ t = negTermShift 1 (tyTermSubst (typeShift 1 σ) 0 t)
