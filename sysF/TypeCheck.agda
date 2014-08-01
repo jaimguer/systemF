@@ -58,72 +58,108 @@ getTypeFromContext i c with (getBinding i c)
 -}
 type-of : Term → Ctx → Type
 type-of Empty   c = Empty
-type-of TmTrue  c = Boolean
-type-of TmFalse c = Boolean
+type-of True  c = Boolean
+type-of False c = Boolean
 type-of (Num n) c = Nat
 type-of (Succ n) c with (type-of n c)
 ... | Nat = Nat
 ... | _ = Empty
 -- Both branches of the if statement are requred to
 -- have the same type
-type-of (TmIf q a b) c = if (typeEq (type-of q c) Boolean c)
+type-of (If q a b) c = if (typeEq (type-of q c) Boolean c)
                          then (let τ = (type-of a c)
                                in (if (typeEq τ (type-of b c) c)
                                    then τ
                                    else Empty))
                          else Empty
 
-type-of (TmVar i) c = (maybeYank (getTypeFromContext i c))
-type-of (TmAbs τ body) c = let σ = type-of body ((VarBind τ) ∷ c)
+type-of (Var i) c = (maybeYank (getTypeFromContext i c))
+type-of (Lam τ body) c = let σ = type-of body ((VarBind τ) ∷ c)
                             in τ ⇒ (negTypeShift 1 σ)
-type-of (TmApp rator rand) c = let τ = type-of rator c
+type-of (App rator rand) c = let τ = type-of rator c
                                in let σ = type-of rand c
                                   in (if (isArrow τ)
                                       then (if (isTypeAligned τ σ c)
                                             then (conseq τ)
                                             else Empty)
                                       else Empty)
-type-of (TmTAbs body) c = Forall (type-of body (TypeVarBind ∷ c))
-type-of (TmTApp e τ) c with (type-of e c)
+type-of (TypeAbs body) c = Forall (type-of body (TypeVarBind ∷ c))
+type-of (TypeApp e τ) c with (type-of e c)
 ... | Forall σ = typeSubstTop τ σ
 ... | _ = Empty
 
 --#################################--
 
 id : Term
-id = TmTAbs (TmAbs (TypeVar 0) (TmVar 0))
+id = TypeAbs (Lam (TypeVar 0) (Var 0))
 
 double : Term
-double = (TmTAbs (TmAbs ((TypeVar 0) ⇒ (TypeVar 0)) (TmAbs (TypeVar 0) (TmApp (TmVar 1) (TmApp (TmVar 1) (TmVar 0))))))
+double = (TypeAbs (Lam ((TypeVar 0) ⇒ (TypeVar 0)) (Lam (TypeVar 0) (App (Var 1) (App (Var 1) (Var 0))))))
  
 quad : Term
-quad = (TmTAbs (TmApp (TmTApp double ((TypeVar 0) ⇒ (TypeVar 0))) (TmTApp double (TypeVar 0))))
+quad = (TypeAbs (App (TypeApp double ((TypeVar 0) ⇒ (TypeVar 0))) (TypeApp double (TypeVar 0))))
 
+{-
+   Input  : (λ x:Nat. x)
+   Output : Nat ⇒ Nat
+-}
 typeTest1 : Type
-typeTest1 = type-of (TmAbs Nat (TmVar 0)) []
+typeTest1 = type-of (Lam Nat (Var 0)) []
 
+{-
+  Input  : ((λ x:(Nat ⇒ Nat) x) (λ x:Nat x))
+  Output : Nat ⇒ Nat
+-}
 typeTest2 : Type
-typeTest2 = type-of (TmApp (TmAbs (Nat ⇒ Nat) (TmVar 0)) (TmAbs Nat (TmVar 0))) []
+typeTest2 = type-of (App (Lam (Nat ⇒ Nat) (Var 0)) (Lam Nat (Var 0))) []
 
+{-
+  Input  : (((Λ X. λ x:X. x) [Nat ⇒ Nat]) ((Λ X. λ x:X. x) [Nat]))
+  Output : Nat ⇒ Nat
+-}
 typeTest3 : Type
-typeTest3 = type-of (TmApp (TmTApp (TmTAbs (TmAbs (TypeVar 0) (TmVar 0))) (Nat ⇒ Nat)) (TmTApp (TmTAbs (TmAbs (TypeVar 0) (TmVar 0))) Nat)) []
+typeTest3 = type-of (App (TypeApp (TypeAbs (Lam (TypeVar 0) (Var 0))) (Nat ⇒ Nat)) (TypeApp (TypeAbs (Lam (TypeVar 0) (Var 0))) Nat)) []
 
-
+{-
+  Input  : (λ x:(Nat ⇒ Nat). λ y:Nat. x (x y))
+  Output : (Nat ⇒ Nat) ⇒ (Nat ⇒ Nat)
+-}
 typeTest4 : Type
-typeTest4 = type-of (TmAbs (Nat ⇒ Nat) (TmAbs Nat (TmApp (TmVar 1) (TmApp (TmVar 1) (TmVar 0))))) []
+typeTest4 = type-of (Lam (Nat ⇒ Nat) (Lam Nat (App (Var 1) (App (Var 1) (Var 0))))) []
 
+{-
+  Input  : ((λ x:(Bool ⇒ Bool). (If (x False) True False)) (λ x:Bool. (If x False True)))
+  Output : Bool
+-}
 typeTest5 : Type
-typeTest5 = type-of (TmApp (TmAbs (Boolean ⇒ Boolean) (TmIf (TmApp (TmVar 0) TmFalse) TmTrue TmFalse))
-                           (TmAbs Boolean (TmIf (TmVar 0) TmFalse TmTrue))) []
+typeTest5 = type-of (App (Lam (Boolean ⇒ Boolean)
+                              (If (App (Var 0) False) True False))
+                         (Lam Boolean (If (Var 0) False True))) []
 
+{-
+  Input  : ((Λ X. λ x:X x) [∀ x])
+  Output : (∀ X) ⇒ (∀ X)
+-}
 typeTest6 : Type
-typeTest6 = type-of (TmTApp (TmTAbs (TmAbs (TypeVar 0) (TmVar 0))) (Forall (TypeVar 0))) []
+typeTest6 = type-of (TypeApp (TypeAbs (Lam (TypeVar 0) (Var 0))) (Forall (TypeVar 0))) []
 
+{-
+  Input  : (Λ X. λ x:X. x)
+  Output : ∀ X.(X ⇒ X)
+-}
 typeTest7 : Type
 typeTest7 = type-of id []
 
+{-
+  Input  : (Λ X. λ x:(X ⇒ X). λ y:X. x (x y))
+  Output : ∀ X. ((X ⇒ X) ⇒ (X ⇒ X))
+-}
 typeTest8 : Type
 typeTest8 = type-of double []
 
+{-
+  Input  : Λ X. ((double [X ⇒ X]) (double [X]))
+  Output : ∀ X. ((X ⇒ X) ⇒ (X ⇒ X))
+-}
 typeTest9 : Type
 typeTest9 = type-of quad []
