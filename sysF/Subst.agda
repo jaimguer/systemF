@@ -8,7 +8,7 @@ open import Shifting
 
 {-
   Primary substitution method for terms.
-  j : Index of free variable to be substituted
+  j : Lower bound index of free variable to be substituted
   s : Term that will replace variable j
 -}
 termSubst : ℕ → Term → Term → Term
@@ -57,11 +57,13 @@ typeSubst σ j (Forall β) = Forall (typeSubst σ (suc j) β)
 -}
 termSubstTop : Term → Term → Term
 termSubstTop s t = negTermShift 1 (termSubst 0 (termShift 1 s) t)
-
+-- (Lam Nat (App (Var 1) (Var 2))) (Lam Nat (App (Var 1) (Var 2)))
+-- (Lam Nat (App (Var 2) (Var 3)))
+--
 {-
   Substitute the free types
   s : the type to be substituted
-  t : the type into which the substitution will occurr
+  t : the type into which the substitution will occur
   This operation is analogous to the above termSubstTop
 -}
 typeSubstTop : Type → Type → Type
@@ -71,12 +73,12 @@ typeSubstTop σ τ = negTypeShift 1 (typeSubst (typeShift 1 σ) 0 τ)
   Substitute a type into a type abstraction
 -}
 tyTermSubst : Type → ℕ → Term → Term
-tyTermSubst σ j Empty     = Empty
-tyTermSubst σ j True    = True
-tyTermSubst σ j False   = False
-tyTermSubst σ j (Succ n)  = Succ (tyTermSubst σ j n)
-tyTermSubst σ j (Num n)   = (Num n)
-tyTermSubst σ j (Var x) = (Var x)
+tyTermSubst σ j Empty    = Empty
+tyTermSubst σ j True     = True
+tyTermSubst σ j False    = False
+tyTermSubst σ j (Succ n) = Succ (tyTermSubst σ j n)
+tyTermSubst σ j (Num n)  = (Num n)
+tyTermSubst σ j (Var x)  = (Var x)
 tyTermSubst σ j (If q f s) = If (tyTermSubst σ j q)
                                 (tyTermSubst σ j f)
                                 (tyTermSubst σ j s)

@@ -22,15 +22,15 @@ getTyAbb n c with (getBinding n c)
   Function to determine if two types are equal.
 -}
 typeEq : Type → Type → Ctx →  Bool
-typeEq Empty     Empty       c = true
-typeEq Boolean   Boolean     c = true
-typeEq Nat       Nat         c = true
-typeEq (α ⇒ β)   (τ ⇒ σ)     c = (And (typeEq α τ c)
+typeEq Empty       Empty       c = true
+typeEq Boolean     Boolean     c = true
+typeEq Nat         Nat         c = true
+typeEq (α ⇒ β)     (τ ⇒ σ)     c = (And (typeEq α τ c)
                                        (typeEq β σ c))
-typeEq (TypeVar i) σ         c = typeEq (getTyAbb i c) σ c
-typeEq τ         (TypeVar j) c = typeEq τ (getTyAbb j c) c
-typeEq (Forall i) (Forall j) c = typeEq i j c
-typeEq _ _ _                 = false
+typeEq (TypeVar i) σ           c = typeEq (getTyAbb i c) σ c
+typeEq τ           (TypeVar j) c = typeEq τ (getTyAbb j c) c
+typeEq (Forall i)  (Forall j)  c = typeEq i j c
+typeEq _           _           _  = false
 
 {-
   Function to determine if a function type will receive
@@ -38,7 +38,7 @@ typeEq _ _ _                 = false
 -}
 isTypeAligned : Type → Type → Ctx → Bool
 isTypeAligned (α ⇒ β) σ c = typeEq σ α c
-isTypeAligned _ _ _ = false
+isTypeAligned _       _ _ = false
 
 {-
   Function to extract type from a context.
@@ -49,7 +49,7 @@ getTypeFromContext : ℕ → Ctx → Maybe Type
 getTypeFromContext i c with (getBinding i c)
 ... | just (VarBind τ)     = just τ
 ... | just (TmAbbBind _ τ) = just τ
-... | just TypeVarBind       = nothing
+... | just TypeVarBind     = nothing
 ... | just (TyAbbBind x)   = nothing
 ... | _                    = nothing
 
@@ -57,10 +57,10 @@ getTypeFromContext i c with (getBinding i c)
   Type checker
 -}
 type-of : Term → Ctx → Type
-type-of Empty   c = Empty
-type-of True  c = Boolean
-type-of False c = Boolean
-type-of (Num n) c = Nat
+type-of Empty    c = Empty
+type-of True     c = Boolean
+type-of False    c = Boolean
+type-of (Num n)  c = Nat
 type-of (Succ n) c with (type-of n c)
 ... | Nat = Nat
 ... | _ = Empty

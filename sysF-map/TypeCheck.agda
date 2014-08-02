@@ -19,10 +19,10 @@ getTyAbb n c with (getBinding n c)
 ... | _                  = Empty
 
 typeEq : Type → Type → Ctx →  Bool
-typeEq Empty    Empty      c = true
-typeEq Boolean  Boolean    c = true
-typeEq Nat      Nat        c = true
-typeEq (y ⇒ y') (z ⇒ z')   c = (And (typeEq y z c) (typeEq y' z' c))
+typeEq Empty    Empty        c = true
+typeEq Boolean  Boolean      c = true
+typeEq Nat      Nat          c = true
+typeEq (y ⇒ y') (z ⇒ z')     c = (And (typeEq y z c) (typeEq y' z' c))
 typeEq (TypeVar i) σ         c = typeEq (getTyAbb i c) σ c
 typeEq τ         (TypeVar j) c = typeEq τ (getTyAbb j c) c
 typeEq (Forall y) (Forall z) c = (typeEq y z c)
@@ -36,7 +36,7 @@ getTypeFromContext : ℕ → Ctx → Maybe Type
 getTypeFromContext i c with (getBinding i c)
 ... | just (VarBind τ)     = just τ
 ... | just (TmAbbBind _ τ) = just τ
-... | just TypeVarBind       = nothing
+... | just TypeVarBind     = nothing
 ... | just (TyAbbBind x)   = nothing
 ... | _                    = nothing
 
@@ -84,11 +84,6 @@ double = (TypeAbs (Lam ((TypeVar 0) ⇒ (TypeVar 0)) (Lam (TypeVar 0) (App (Var 
 quad : Term
 quad = TypeAbs (App (TypeApp double ((TypeVar 0) ⇒ (TypeVar 0))) (TypeApp double (TypeVar 0)))
 
-t : Type
-t = type-of (TypeApp double ((TypeVar 0) ⇒ (TypeVar 0))) [] 
-
-s : Type 
-s = type-of (TypeApp double (TypeVar 0)) []
 
 {-
    Input  : (λ x:Nat. x)

@@ -46,24 +46,24 @@ negTypeShiftAbove d c (Forall β) = Forall (negTypeShiftAbove d (suc c) β)
   c : Cutoff for when to stop shifting
 -}
 termShiftAbove : ℕ → ℕ → Term → Term
+termShiftAbove d c Empty    = Empty
+termShiftAbove d c (Num n)  = (Num n)
 termShiftAbove d c (Succ n) = Succ (termShiftAbove d c n)
-termShiftAbove d c Empty = Empty
-termShiftAbove d c (Num n)            = (Num n)
-termShiftAbove d c True = True
-termShiftAbove d c False = False
+termShiftAbove d c True     = True
+termShiftAbove d c False    = False
 termShiftAbove d c (Var x) with (geq x c)
 ... | true  = (Var (x + d))
 ... | false = (Var x)
 termShiftAbove d c (If q f s) = If (termShiftAbove d c q)
-                                         (termShiftAbove d c f)
-                                         (termShiftAbove d c s)
+                                   (termShiftAbove d c f)
+                                   (termShiftAbove d c s)
 termShiftAbove d c (Lam τ body)     = Lam (typeShiftAbove d c τ)
-                                              (termShiftAbove d (suc c) body)
+                                          (termShiftAbove d (suc c) body)
 termShiftAbove d c (App rator rand) = App (termShiftAbove d c rator)
-                                              (termShiftAbove d c rand)
+                                          (termShiftAbove d c rand)
 termShiftAbove d c (TypeAbs t)         = TypeAbs (termShiftAbove d (suc c) t)
 termShiftAbove d c (TypeApp e τ)       = TypeApp (termShiftAbove d c e)
-                                               (typeShiftAbove d c τ)
+                                                 (typeShiftAbove d c τ)
 {-
   Method for shifting term variables "down".
   Analogous to negTypeShiftAbove in functionality.

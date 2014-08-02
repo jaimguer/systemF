@@ -15,13 +15,13 @@ open import Subst
 -}
 value-of : Term → Ctx → Term
 value-of (Num n)  c = (Num n)
-value-of True   c = True
-value-of False  c = False
+value-of True     c = True
+value-of False    c = False
 value-of (Succ n) c = Succ (value-of n c)
 
-value-of (If True a b) c  = value-of a c
+value-of (If True a b)  c = value-of a c
 value-of (If False a b) c = value-of b c
-value-of (If q a b) c       = value-of (If (value-of q c) a b) c
+value-of (If q a b)     c = value-of (If (value-of q c) a b) c
 
 value-of (Var n) c with (getBinding n c)
 ... | just (TmAbbBind term type) = term
@@ -33,10 +33,10 @@ value-of (App (Lam τ body) v) c with (isVal v)
 ... | true  = (termSubstTop v body)
 ... | false =  value-of (App (Lam τ body) (value-of v c)) c
 
+value-of (App rator rand)           c = value-of (App (value-of rator c) rand) c
 value-of (TypeApp (TypeAbs body) τ) c = value-of (tyTermSubstTop τ body) c
-value-of (App rator rand)       c = value-of (App (value-of rator c) rand) c
-value-of (TypeApp exp τ)           c = (TypeApp (value-of exp c) τ)
-value-of _                        _ = Empty
+value-of (TypeApp exp τ)            c = (TypeApp (value-of exp c) τ)
+value-of _                          _ = Empty
 
 {-
   Some test programs
